@@ -2,7 +2,9 @@ services:
   - type: web
     name: article-app-backend
     env: docker
-    dockerfilePath: ./Dockerfile  # Make sure this path is relative to your backend folder
+    dockerfilePath: backend/Dockerfile  # Update this path
+    buildCommand: docker build -t article-app-backend ./backend  # Add build command
+    startCommand: docker run article-app-backend  # Add start command
     envVars:
       - key: DATABASE_URL
         fromDatabase:
