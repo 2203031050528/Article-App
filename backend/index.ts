@@ -5,11 +5,16 @@ import { db } from "./db";
 import { articles, userPreferences } from "./schema";
 import { fetchAndStoreArticles } from "./fetchArticles";
 import { authMiddleware } from "./middleware/auth";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import cron from "node-cron";
 import { CONFIG } from "./config";
 
-const app = new Hono();
+// Add type for context
+type Variables = {
+  userId: string;
+};
+
+const app = new Hono<{ Variables: Variables }>();
 
 // Health check
 app.get("/", (c) => c.json({ status: "ok" }));
@@ -152,7 +157,7 @@ cron.schedule("0 * * * *", async () => {
 console.log(`Starting server on port ${CONFIG.PORT}...`);
 serve({
   fetch: app.fetch,
-  port: CONFIG.PORT
+  port: Number(CONFIG.PORT)
 }, (info) => {
   console.log(`Server is running on http://localhost:${info.port}`);
 }); 

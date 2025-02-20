@@ -4,7 +4,7 @@ import * as schema from "./schema";
 import { CONFIG } from "./config";
 
 const sql = neon(CONFIG.DATABASE_URL);
-export const db = drizzle(sql, { schema });
+export const db = drizzle(sql as any, { schema });
 
 // Verify connection
 async function verifyConnection() {
