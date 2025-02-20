@@ -4,14 +4,17 @@ FROM node:20-slim
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Create and set backend directory
+WORKDIR /app/backend
+
+# Copy package files from backend directory
+COPY backend/package*.json ./
 
 # Install dependencies
 RUN npm install
 
-# Copy source code
-COPY . .
+# Copy backend source code
+COPY backend/ ./
 
 # Build TypeScript
 RUN npm run build
@@ -20,4 +23,4 @@ RUN npm run build
 EXPOSE 3000
 
 # Start the app
-CMD ["npm", "start"] 
+CMD ["npm", "start"]
