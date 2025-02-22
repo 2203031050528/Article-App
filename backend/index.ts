@@ -8,6 +8,7 @@ import { authMiddleware } from "./middleware/auth";
 import { eq } from "drizzle-orm";
 import cron from "node-cron";
 import { CONFIG } from "./config";
+import { cors } from 'hono/cors'
 
 // Add type for context
 type Variables = {
@@ -15,6 +16,14 @@ type Variables = {
 };
 
 const app = new Hono<{ Variables: Variables }>();
+
+// Add CORS middleware
+app.use('/*', cors({
+  origin: ['http://localhost:3000', 'https://your-frontend-domain.vercel.app'], // Add your actual frontend domain
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Session-Id'],
+  credentials: true,
+}));
 
 // Health check
 app.get("/", (c) => c.json({ status: "ok" }));
@@ -94,6 +103,7 @@ app.post("/api/preferences", async (c) => {
 app.get("/api/articles", async (c) => {
   try {
     const userId = c.get('userId');
+    console.log('Fetching articles for user:', userId);
     
     // Get user preferences
     const userPref = await db
@@ -101,9 +111,9 @@ app.get("/api/articles", async (c) => {
       .from(userPreferences)
       .where(eq(userPreferences.userId, userId));
 
+    console.log('User preferences:', userPref);
+
     const categories = userPref[0]?.categories || ["technology"];
-    
-    // Get articles with pagination
     const page = Number(c.req.query('page')) || 1;
     const limit = Number(c.req.query('limit')) || 10;
     const offset = (page - 1) * limit;
@@ -111,10 +121,12 @@ app.get("/api/articles", async (c) => {
     const allArticles = await db
       .select()
       .from(articles)
-      .where(eq(articles.category, categories[0])) // TODO: Add support for multiple categories
+      .where(eq(articles.category, categories[0]))
       .limit(limit)
       .offset(offset)
       .orderBy(articles.timestamp);
+
+    console.log(`Found ${allArticles.length} articles`);
 
     return c.json({
       articles: allArticles,
@@ -124,7 +136,10 @@ app.get("/api/articles", async (c) => {
     });
   } catch (error) {
     console.error("Error fetching articles:", error);
-    return c.json({ error: "Failed to fetch articles" }, 500);
+    return c.json({ 
+      error: "Failed to fetch articles",
+      details: error.message 
+    }, 500);
   }
 });
 

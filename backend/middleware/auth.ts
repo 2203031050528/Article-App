@@ -8,19 +8,31 @@ const clerk = createClerkClient({ secretKey: CONFIG.CLERK_SECRET_KEY });
 
 export async function authMiddleware(c: Context, next: () => Promise<void>) {
   try {
-    const sessionId = c.req.header('X-Session-Id');
-    const sessionToken = c.req.header('Authorization')?.replace('Bearer ', '');
+    const token = c.req.header('Authorization')?.replace('Bearer ', '');
     
-    if (!sessionId || !sessionToken) {
-      throw new HTTPException(401, { message: 'Unauthorized' });
+    if (!token) {
+      console.error('No token provided');
+      throw new HTTPException(401, { message: 'Unauthorized - No token provided' });
     }
 
-    // Verify the session token
-    const session = await clerk.sessions.verifySession(sessionId, sessionToken);
-    c.set('userId', session.userId);
-    
-    await next();
+    try {
+      // Verify the JWT token with Clerk
+      const decoded = await clerk.verifyToken(token);
+      if (!decoded) {
+        throw new Error('Token verification failed');
+      }
+      
+      // Set the user ID from the decoded token
+      c.set('userId', decoded.sub);
+      console.log('Auth successful for user:', decoded.sub);
+      
+      await next();
+    } catch (error) {
+      console.error('Token verification failed:', error);
+      throw new HTTPException(401, { message: 'Invalid token' });
+    }
   } catch (error) {
+    console.error('Auth error:', error);
     throw new HTTPException(401, { message: 'Unauthorized' });
   }
 } 
