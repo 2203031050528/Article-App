@@ -13,7 +13,16 @@ const auth_1 = require("./middleware/auth");
 const drizzle_orm_1 = require("drizzle-orm");
 const node_cron_1 = __importDefault(require("node-cron"));
 const config_1 = require("./config");
+const cors_1 = require("hono/cors");
 const app = new hono_1.Hono();
+// Update CORS configuration
+app.use('/*', (0, cors_1.cors)({
+    origin: ['http://localhost:3000', 'https://your-frontend-domain.vercel.app'],
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Added OPTIONS
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Session-Id', 'Clerk-Session-Id'],
+    credentials: true,
+    exposeHeaders: ['Authorization'],
+}));
 // Health check
 app.get("/", (c) => c.json({ status: "ok" }));
 // Protected routes
@@ -82,23 +91,25 @@ app.post("/api/preferences", async (c) => {
 app.get("/api/articles", async (c) => {
     try {
         const userId = c.get('userId');
+        console.log('Fetching articles for user:', userId);
         // Get user preferences
         const userPref = await db_1.db
             .select()
             .from(schema_1.userPreferences)
             .where((0, drizzle_orm_1.eq)(schema_1.userPreferences.userId, userId));
+        console.log('User preferences:', userPref);
         const categories = userPref[0]?.categories || ["technology"];
-        // Get articles with pagination
         const page = Number(c.req.query('page')) || 1;
         const limit = Number(c.req.query('limit')) || 10;
         const offset = (page - 1) * limit;
         const allArticles = await db_1.db
             .select()
             .from(schema_1.articles)
-            .where((0, drizzle_orm_1.eq)(schema_1.articles.category, categories[0])) // TODO: Add support for multiple categories
+            .where((0, drizzle_orm_1.eq)(schema_1.articles.category, categories[0]))
             .limit(limit)
             .offset(offset)
             .orderBy(schema_1.articles.timestamp);
+        console.log(`Found ${allArticles.length} articles`);
         return c.json({
             articles: allArticles,
             page,
@@ -108,7 +119,10 @@ app.get("/api/articles", async (c) => {
     }
     catch (error) {
         console.error("Error fetching articles:", error);
-        return c.json({ error: "Failed to fetch articles" }, 500);
+        return c.json({
+            error: "Failed to fetch articles",
+            details: error instanceof Error ? error.message : 'Unknown error'
+        }, 500);
     }
 });
 // Manual fetch trigger (protected)

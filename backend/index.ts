@@ -17,12 +17,13 @@ type Variables = {
 
 const app = new Hono<{ Variables: Variables }>();
 
-// Add CORS middleware
+// Update CORS configuration
 app.use('/*', cors({
-  origin: ['http://localhost:3000', 'https://your-frontend-domain.vercel.app'], // Add your actual frontend domain
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowHeaders: ['Content-Type', 'Authorization', 'X-Session-Id'],
+  origin: ['http://localhost:3000', 'https://your-frontend-domain.vercel.app'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Added OPTIONS
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Session-Id', 'Clerk-Session-Id'],
   credentials: true,
+  exposeHeaders: ['Authorization'],
 }));
 
 // Health check
@@ -138,7 +139,7 @@ app.get("/api/articles", async (c) => {
     console.error("Error fetching articles:", error);
     return c.json({ 
       error: "Failed to fetch articles",
-      details: error.message 
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, 500);
   }
 });
